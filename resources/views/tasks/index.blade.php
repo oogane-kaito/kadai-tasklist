@@ -3,7 +3,7 @@
 @section('content')
 
     <div class="prose ml-4">
-        <h2 class="text-lg">メッセージ 一覧</h2>
+        <h2 class="text-lg">タスク一覧</h2>
     </div>
 
     @if (isset($tasks))
@@ -24,5 +24,6 @@
             </tbody>
         </table>
     @endif
+
 
 @endsection
