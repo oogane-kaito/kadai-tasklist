@@ -12,10 +12,18 @@ class TasksController extends Controller
      */
     public function index()
     {
-        $tasks = Task::all();
+        if (\Auth::check()) {
+        // 認証済みユーザーを取得
+        $user = \Auth::user();
+        $tasks =  $user->tasks()->get();
         return view("tasks.index",[
             "tasks" => $tasks,
         ]);
+    }else{
+        // // トップページへリダイレクトさせる
+        return redirect('/');
+    }
+       
     }
 
     /**
@@ -23,8 +31,15 @@ class TasksController extends Controller
      */
     public function create()
     {
+        // ユーザーが認証されているか確認
+        if (!\Auth::check()) {
+            // 認証されていない場合、ログインページにリダイレクト
+            return redirect("/login")->with('error', 'ログインが必要です。');
+        }
         $task = new Task;
 
+        
+    
         // メッセージ作成ビューを表示
         return view('tasks.create', [
             'task' => $task,
@@ -43,10 +58,11 @@ class TasksController extends Controller
         ]);
 
         // メッセージを作成
-        $task = new Task;
-        $task->status = $request->status;
-        $task->content = $request->content;
-        $task->save();
+        // 認証済みユーザー（閲覧者）の投稿として作成（リクエストされた値をもとに作成）
+        $request->user()->tasks()->create([
+            'content' => $request->content,
+            'status' => $request ->status
+        ]);
 
         // // トップページへリダイレクトさせる
         return redirect('/');
@@ -57,8 +73,17 @@ class TasksController extends Controller
      */
     public function show(string $id)
     {
+                // ユーザーが認証されているか確認
+        if (!\Auth::check()) {
+            // 認証されていない場合、ログインページにリダイレクト
+            return redirect("/login")->with('error', 'ログインが必要です。');
+        }
         // idの値でメッセージを検索して取得
         $task = Task::findOrFail($id);
+
+        if (\Auth::id() !== $task->user_id){
+            return redirect("/")->with('error', 'ユーザーが違います');
+        }
 
         // メッセージ詳細ビューでそれを表示
         return view('tasks.show', [
@@ -71,8 +96,16 @@ class TasksController extends Controller
      */
     public function edit(string $id)
     {
+        if (!\Auth::check()) {
+            // 認証されていない場合、ログインページにリダイレクト
+            return redirect("/login")->with('error', 'ログインが必要です。');
+        }
         // idの値でメッセージを検索して取得
         $task = Task::findOrFail($id);
+        if (\Auth::id() !== $task->user_id){
+            return redirect("/")->with('error', 'ユーザーが違います');
+        }
+
 
         // メッセージ編集ビューでそれを表示
         return view('tasks.edit', [
@@ -94,14 +127,18 @@ class TasksController extends Controller
 
         // idの値でメッセージを検索して取得
         $task = Task::findOrFail($id);
+        if (\Auth::id() === $task->user_id){
+            // メッセージを更新
+            $task->status = $request->status;
+            $task->content = $request->content;
+            $task->save();
+            // トップページへリダイレクトさせる
+            return redirect('/');
+        }
 
-        // メッセージを更新
-        $task->status = $request->status;
-        $task->content = $request->content;
-        $task->save();
+        
 
-        // トップページへリダイレクトさせる
-        return redirect('/');
+
     }
 
     /**
@@ -111,10 +148,12 @@ class TasksController extends Controller
     {
         // idの値でメッセージを検索して取得
         $task = Task::findOrFail($id);
-        // メッセージを削除
-        $task->delete();
+        if (\Auth::id() === $task->user_id) {
+            $task->delete();
+            return redirect('/');
+        }else{
+            return redirect('/');
+        }
 
-        // トップページへリダイレクトさせる
-        return redirect('/');
     }
 }
